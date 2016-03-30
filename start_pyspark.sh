@@ -3,7 +3,7 @@ if [[ $# -eq 0 ]] ; then
     exit 0
 fi
 
-export SPARK_PATH='/Users/wd/Workspace/spark_source/spark-1.6.1-bin-hadoop2.6'
+export SPARK_PATH='/Users/wd/Workspace/sparkSource/spark-1.6.1-bin-hadoop2.6'
 export PYSPARK_DRIVER_PYTHON="jupyter"
 export PYSPARK_DRIVER_PYTHON_OPTS="notebook"
 # Uncomment next line if the default python on your system is python3
