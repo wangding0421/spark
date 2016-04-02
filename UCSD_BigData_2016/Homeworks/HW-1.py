@@ -47,8 +47,8 @@ sentences=textRDD.flatMap(lambda x: x.split(". "))
 
 #Data preprocessing
 import string
-pSentences = sentences.map(lambda x: x.lower().replace('\r\n', ' ')
-                               .translate(dict.fromkeys(map(ord, string.punctuation))))
+pSentences = sentences.map(lambda x: x.lower().replace('\r\n', ' ').replace(u'\ufeff', '')
+                               .translate(dict.fromkeys(map(ord, string.punctuation),32)))
 
 
 # #### Note: 
