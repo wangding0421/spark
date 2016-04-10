@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Name: Ding Wang
 # Email: diw005@ucsd.edu
 # PID: A53089251

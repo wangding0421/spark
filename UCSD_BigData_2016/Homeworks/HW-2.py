@@ -96,20 +96,21 @@ sc = SparkContext()
 # Number of elements: 2193
 # ```
 
-# In[167]:
+# In[76]:
 
 def print_count(rdd):
     print 'Number of elements:', rdd.count()
 
 
-# In[168]:
+# In[77]:
 
 # Your code here
-s_fileList = '../Data/hw2-files-20gb.txt'
+s_fileList = '../Data/hw2-files-5gb.txt'
+enc = lambda x: x.encode('utf-8')
+
 with open(s_fileList) as f:
     files = [l.strip() for l in f.readlines()]
-sRDD_texts = sc.textFile(','.join(files))
-sRDD_texts.cache()
+sRDD_texts = sc.textFile(','.join(files)).cache()
 print_count(sRDD_texts)
 
 
@@ -119,7 +120,7 @@ print_count(sRDD_texts)
 # 
 # **UPDATE:** Python built-in json library is too slow. In our experiment, 70% of the total running time is spent on parsing tweets. Therefore we recommend using [ujson](https://pypi.python.org/pypi/ujson) instead of json. It is at least 15x faster than the built-in json library according to our tests.
 
-# In[169]:
+# In[78]:
 
 import ujson
 
@@ -147,7 +148,7 @@ json_obj
 # 
 # (1) Parse raw JSON tweets to obtain valid JSON objects. From all valid tweets, construct a pair RDD of `(user_id, text)`, where `user_id` is the `id_str` data field of the `user` dictionary (read [Tweets](#Tweets) section above), `text` is the `text` data field.
 
-# In[170]:
+# In[87]:
 
 import ujson
 
@@ -163,8 +164,7 @@ def safe_parse(raw_json):
     pass
 
 # your code here
-tRDD_user_texts = sRDD_texts.map(safe_parse).filter(lambda x : x != None).map(lambda x: (x["user"]["id_str"], x["text"]))
-tRDD_user_texts.cache()
+tRDD_user_texts = sRDD_texts.map(safe_parse).filter(lambda x : x != None).map(lambda x: (x["user"]["id_str"], x["text"])).cache()
 
 
 # (2) Count the number of different users in all valid tweets (hint: [the `distinct()` method](https://spark.apache.org/docs/latest/programming-guide.html#transformations)).
@@ -174,13 +174,13 @@ tRDD_user_texts.cache()
 # The number of unique users is: 2083
 # ```
 
-# In[171]:
+# In[88]:
 
 def print_users_count(count):
     print 'The number of unique users is:', count
 
 
-# In[172]:
+# In[89]:
 
 # your code here
 print_users_count(tRDD_user_texts.map(lambda x: x[0]).distinct().count())
@@ -194,7 +194,7 @@ print_users_count(tRDD_user_texts.map(lambda x: x[0]).distinct().count())
 
 # (1) Load the pickle file.
 
-# In[173]:
+# In[90]:
 
 # your code here
 def unpickle(file):
@@ -205,7 +205,7 @@ def unpickle(file):
     return dict
 
 
-# In[174]:
+# In[91]:
 
 d_partition = unpickle("../Data/users-partition.pickle")
 
@@ -214,13 +214,13 @@ d_partition = unpickle("../Data/users-partition.pickle")
 # 
 # Count the number of posts from group 0, 1, ..., 6, plus the number of posts from users who are not in any partition. Assign users who are not in any partition to the group 7.
 # 
+# 
 # Put the results of this step into a pair RDD `(group_id, count)` that is sorted by key.
 
-# In[175]:
+# In[92]:
 
 # your code here
-tRDD_group_texts = tRDD_user_texts.map(lambda x: (d_partition[x[0]] if (x[0] in d_partition) else 7, x[1])).partitionBy(8).glom()
-tRDD_group_count = tRDD_group_texts.map(lambda x: (x[0][0], len(x)))
+tRDD_group_count = tRDD_user_texts.map(lambda x: (d_partition[x[0]] if (x[0] in d_partition) else 7,1)).reduceByKey(lambda x,y: x+y).sortByKey().cache()
 
 
 # (3) Print the post count using the `print_post_count` function we provided.
@@ -238,14 +238,14 @@ tRDD_group_count = tRDD_group_texts.map(lambda x: (x[0][0], len(x)))
 # Group 7 posted 798 tweets
 # ```
 
-# In[176]:
+# In[93]:
 
 def print_post_count(counts):
     for group_id, count in counts:
         print 'Group %d posted %d tweets' % (group_id, count)
 
 
-# In[177]:
+# In[94]:
 
 # your code here
 print_post_count(tRDD_group_count.collect())
@@ -272,7 +272,7 @@ print_post_count(tRDD_group_count.collect())
 
 # (0) Load the tweet tokenizer.
 
-# In[178]:
+# In[95]:
 
 # %load happyfuntokenizing.py
 #!/usr/bin/env python
@@ -490,7 +490,7 @@ class Tokenizer:
         return s
 
 
-# In[179]:
+# In[96]:
 
 from math import log
 
@@ -519,14 +519,11 @@ def print_tokens(tokens, gid = None):
 # Number of elements: 8949
 # ```
 
-# In[180]:
+# In[106]:
 
 # your code here
-def f(x):
-    return x
-enc = lambda text: text.encode('utf-8')
-tRDD_user_token = tRDD_user_texts.map(lambda x: (x[0], map(enc, tok.tokenize(x[1])))).flatMapValues(f).distinct().cache()
-print_count(tRDD_user_token.map(lambda x: x[1]).distinct())
+sRDD_tokens = tRDD_user_texts.flatMap(lambda x: tok.tokenize(x[1])).distinct().cache()
+print_count(sRDD_tokens)
 
 
 # (2) Tokens that are mentioned by too few users are usually not very interesting. So we want to only keep tokens that are mentioned by at least 100 users. Please filter out tokens that don't meet this requirement.
@@ -561,12 +558,16 @@ print_count(tRDD_user_token.map(lambda x: x[1]).distinct())
 # this	190.0000
 # ```
 
-# In[181]:
+# In[110]:
 
 # your code here
-sRDD_geq100Tokens = tRDD_user_token.map(lambda x: (x[1],1)).reduceByKey(lambda x, y: x+y).map(lambda x: (x[1], x[0])).sortByKey(False).filter(lambda x: x[0] >= 100).map(lambda x: (x[1], x[0])).cache()
+tRDD_user_token = tRDD_user_texts.map(lambda x: (x[0], tok.tokenize(x[1]))).reduceByKey(lambda x,y:x+y).map(lambda x: (x[0], map(enc, list(set(x[1]))))).cache()
+
+sRDD_geq100Tokens = tRDD_user_token.flatMap(lambda x: x[1]).map(lambda x: (x,1)).reduceByKey(lambda x, y: x+y).filter(lambda x: x[1] >= 100).cache()
+#.map(lambda x: (x[1], x[0]))
+#.sortByKey(False).map(lambda x: (x[1], x[0])).cache()
 print_count(sRDD_geq100Tokens)
-print_tokens(sRDD_geq100Tokens.take(20))
+print_tokens(sRDD_geq100Tokens.sortBy(lambda x: x[1], False).take(20))
 
 
 # (3) For all tokens that are mentioned by at least 100 users, compute their relative popularity in each user group. Then print the top 10 tokens with highest relative popularity in each user group. In case two tokens have same relative popularity, break the tie by printing the alphabetically smaller one.
@@ -672,31 +673,18 @@ print_tokens(sRDD_geq100Tokens.take(20))
 # i	-1.2996
 # ```
 
-# In[182]:
+# In[103]:
 
 # your code here
 d_geq100Tokens = sRDD_geq100Tokens.collectAsMap()
 
-tRDD_groupToken_k = tRDD_user_token.map(lambda x: ((d_partition[x[0]] if (x[0] in d_partition) else 7, x[1]),1)).filter(lambda x: x[0][1] in d_geq100Tokens.keys()).reduceByKey(lambda x,y: x+y).map(lambda x: (get_rel_popularity(x[1], d_geq100Tokens[x[0][1]]),(x[0][0], x[0][1]))).cache()
+l_group_TokenK = tRDD_user_token.flatMapValues(lambda x: x).filter(lambda x: x[1] in d_geq100Tokens).map(lambda x: ((d_partition[x[0]] if (x[0] in d_partition) else 7, x[1]),1)).reduceByKey(lambda x,y: x+y).map(lambda x: (x[0][0], (x[0][1],get_rel_popularity(x[1], d_geq100Tokens[x[0][1]])))).partitionBy(8).glom().collect()
 
 for i in range(8):
-    tRDD_token_log = tRDD_groupToken_k.filter(lambda x: x[1][0] == i).sortByKey(False).map(lambda x: (x[1][1], x[0]))
-    print_tokens(tRDD_token_log.take(10),i)
+    tRDD_token_log = sc.parallelize(l_group_TokenK[i]).map(lambda x : x[1])
+    print_tokens(tRDD_token_log.sortBy(lambda x: (x[1], x[0]), False).take(10),i)
 
 
 # (4) (optional, not for grading) The users partition is generated by a machine learning algorithm that tries to group the users by their political preferences. Three of the user groups are showing supports to Bernie Sanders, Ted Cruz, and Donald Trump. 
 # 
 # If your program looks okay on the local test data, you can try it on the larger input by submitting your program to the homework server. Observe the output of your program to larger input files, can you guess the partition IDs of the three groups mentioned above based on your output?
-
-# In[ ]:
-
-# Change the values of the following three items to your guesses
-users_support = [
-    (-1, "Bernie Sanders"),
-    (-1, "Ted Cruz"),
-    (-1, "Donald Trump")
-]
-
-for gid, candidate in users_support:
-    print "Users from group %d are most likely to support %s." % (gid, candidate)
-
