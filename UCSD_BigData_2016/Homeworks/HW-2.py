@@ -96,16 +96,16 @@ sc = SparkContext()
 # Number of elements: 2193
 # ```
 
-# In[1]:
+# In[6]:
 
 def print_count(rdd):
     print 'Number of elements:', rdd.count()
 
 
-# In[2]:
+# In[38]:
 
 # Your code here
-s_fileList = '../Data/hw2-files-final.txt'
+s_fileList = '../Data/hw2-files-20gb.txt'
 enc = lambda x: x.encode('utf-8')
 
 with open(s_fileList) as f:
@@ -120,7 +120,7 @@ print_count(sRDD_texts)
 # 
 # **UPDATE:** Python built-in json library is too slow. In our experiment, 70% of the total running time is spent on parsing tweets. Therefore we recommend using [ujson](https://pypi.python.org/pypi/ujson) instead of json. It is at least 15x faster than the built-in json library according to our tests.
 
-# In[3]:
+# In[39]:
 
 import ujson
 
@@ -148,7 +148,7 @@ json_obj
 # 
 # (1) Parse raw JSON tweets to obtain valid JSON objects. From all valid tweets, construct a pair RDD of `(user_id, text)`, where `user_id` is the `id_str` data field of the `user` dictionary (read [Tweets](#Tweets) section above), `text` is the `text` data field.
 
-# In[4]:
+# In[40]:
 
 import ujson
 
@@ -173,13 +173,13 @@ tRDD_user_texts = sRDD_texts.map(safe_parse).filter(lambda x : x != None).map(la
 # The number of unique users is: 2083
 # ```
 
-# In[5]:
+# In[41]:
 
 def print_users_count(count):
     print 'The number of unique users is:', count
 
 
-# In[6]:
+# In[42]:
 
 # your code here
 print_users_count(tRDD_user_texts.map(lambda x: x[0]).distinct().count())
@@ -193,7 +193,7 @@ print_users_count(tRDD_user_texts.map(lambda x: x[0]).distinct().count())
 
 # (1) Load the pickle file.
 
-# In[7]:
+# In[43]:
 
 # your code here
 def unpickle(file):
@@ -204,7 +204,7 @@ def unpickle(file):
     return dict
 
 
-# In[8]:
+# In[44]:
 
 d_partition = unpickle("../Data/users-partition.pickle")
 
@@ -216,7 +216,7 @@ d_partition = unpickle("../Data/users-partition.pickle")
 # 
 # Put the results of this step into a pair RDD `(group_id, count)` that is sorted by key.
 
-# In[9]:
+# In[45]:
 
 # your code here
 tRDD_group_count = tRDD_user_texts.map(lambda x: (d_partition[x[0]] if (x[0] in d_partition) else 7,1)).reduceByKey(lambda x,y: x+y).sortByKey().cache()
@@ -237,14 +237,14 @@ tRDD_group_count = tRDD_user_texts.map(lambda x: (d_partition[x[0]] if (x[0] in 
 # Group 7 posted 798 tweets
 # ```
 
-# In[10]:
+# In[46]:
 
 def print_post_count(counts):
     for group_id, count in counts:
         print 'Group %d posted %d tweets' % (group_id, count)
 
 
-# In[11]:
+# In[47]:
 
 # your code here
 print_post_count(tRDD_group_count.collect())
@@ -271,7 +271,7 @@ print_post_count(tRDD_group_count.collect())
 
 # (0) Load the tweet tokenizer.
 
-# In[12]:
+# In[48]:
 
 # %load happyfuntokenizing.py
 #!/usr/bin/env python
@@ -489,7 +489,7 @@ class Tokenizer:
         return s
 
 
-# In[13]:
+# In[49]:
 
 from math import log
 
@@ -518,10 +518,10 @@ def print_tokens(tokens, gid = None):
 # Number of elements: 8949
 # ```
 
-# In[14]:
+# In[50]:
 
 # your code here
-sRDD_tokens = tRDD_user_texts.flatMap(lambda x: tok.tokenize(x[1])).distinct().cache()
+sRDD_tokens = tRDD_user_texts.flatMap(lambda x: tok.tokenize(x[1].encode('utf-8'))).distinct().cache()
 print_count(sRDD_tokens)
 
 
@@ -557,10 +557,10 @@ print_count(sRDD_tokens)
 # this	190.0000
 # ```
 
-# In[15]:
+# In[51]:
 
 # your code here
-tRDD_user_token = tRDD_user_texts.map(lambda x: (x[0], tok.tokenize(x[1]))).reduceByKey(lambda x,y:x+y).map(lambda x: (x[0], map(enc, list(set(x[1]))))).cache()
+tRDD_user_token = tRDD_user_texts.map(lambda x: (x[0], tok.tokenize(x[1].encode('utf-8')))).reduceByKey(lambda x,y:x+y).map(lambda x: (x[0], list(set(x[1])))).cache()
 sRDD_geq100Tokens = tRDD_user_token.flatMap(lambda x: x[1]).map(lambda x: (x,1)).reduceByKey(lambda x, y: x+y).filter(lambda x: x[1] >= 100).cache()
 print_count(sRDD_geq100Tokens)
 print_tokens(sRDD_geq100Tokens.sortBy(lambda x: x[1], False).take(20))
@@ -669,7 +669,7 @@ print_tokens(sRDD_geq100Tokens.sortBy(lambda x: x[1], False).take(20))
 # i	-1.2996
 # ```
 
-# In[16]:
+# In[52]:
 
 # your code here
 d_geq100Tokens = sRDD_geq100Tokens.collectAsMap()
@@ -696,3 +696,9 @@ users_support = [
 
 for gid, candidate in users_support:
     print "Users from group %d are most likely to support %s." % (gid, candidate)
+
+
+# In[ ]:
+
+
+
