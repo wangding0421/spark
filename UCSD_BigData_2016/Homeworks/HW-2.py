@@ -105,7 +105,7 @@ def print_count(rdd):
 # In[38]:
 
 # Your code here
-s_fileList = '../Data/hw2-files-20gb.txt'
+s_fileList = '../Data/hw2-files-final.txt'
 enc = lambda x: x.encode('utf-8')
 
 with open(s_fileList) as f:
