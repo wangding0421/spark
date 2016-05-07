@@ -2,6 +2,7 @@
 *.gz
 *.pickle
 *.data
+*.csv
 
 #Ipython notebook checkpoints
 .ipynb_checkpoints
