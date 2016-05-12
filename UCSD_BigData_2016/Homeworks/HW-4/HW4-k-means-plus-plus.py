@@ -10,7 +10,7 @@ sc = SparkContext()
 # 
 # In this notebook, we are going to implement [k-means++](https://en.wikipedia.org/wiki/K-means%2B%2B) algorithm with multiple initial sets. The original k-means++ algorithm will just sample one set of initial centroid points and iterate until the result converges. The only difference **in this implementation is that we will sample `RUNS` sets of initial centroid points and update them in parallel**. The procedure will finish when all centroid sets are converged.
 
-# In[1]:
+# In[2]:
 
 ### Definition of some global parameters.
 K = 5  # Number of centroids
@@ -20,7 +20,7 @@ converge_dist = 0.1 # The K-means algorithm is terminated when the change in the
                     # of the centroids is smaller than 0.1
 
 
-# In[47]:
+# In[3]:
 
 import numpy as np
 import pickle
@@ -110,7 +110,7 @@ def kmeans_init(rdd, K, RUNS, seed):
         # where point x is chosen with probability proportional to D_i(x)^2
         ##############################################################################
         #-------------------------Added Code-----------------------------
-        data = data.map(lambda (x,y): (x, update_dist(x[1], y, idx)))
+        data = data.map(lambda (x,y): (x, update_dist(x[1], y, idx))).cache()
         m_distance = np.array(data.values().collect())
         m_distance_p = m_distance/m_distance.sum(axis = 0)
         for i in range(RUNS):
@@ -194,7 +194,7 @@ def kmeans(rdd, K, RUNS, converge_dist, seed):
     return k_points
 
 
-# In[12]:
+# In[4]:
 
 ## Read data
 data = pickle.load(open("../Data/Weather/stations_projections.pickle", "rb"))
@@ -202,7 +202,7 @@ rdd = sc.parallelize([parse_data(row[1]) for row in data.iterrows()])
 rdd.take(1)
 
 
-# In[48]:
+# In[5]:
 
 # main code
 rdd.take(1)
@@ -217,11 +217,11 @@ group = rdd.mapValues(lambda p: get_closest(p, centroids))            .collect()
 print "Time takes to converge:", time.time() - st
 
 
-# In[49]:
+# In[6]:
 
 ## Verify your results
 
-# In[50]:
+# In[7]:
 
 def get_cost(rdd, centers):
     '''
@@ -245,7 +245,7 @@ def get_cost(rdd, centers):
 cost = get_cost(rdd, centroids)
 
 
-# In[51]:
+# In[8]:
 
 log2 = np.log2
 
@@ -254,7 +254,7 @@ print log2(np.max(cost)), log2(np.min(cost)), log2(np.mean(cost))
 
 # ## Plot the increase of entropy after multiple runs of k-means++
 
-# In[52]:
+# In[9]:
 
 entropy = []
 
@@ -268,10 +268,18 @@ for i in range(RUNS):
 
 # **Note:** Remove this cell before submitting to PyBolt (PyBolt does not fully support matplotlib)
 
+# In[10]:
+
 # ## Print the final results
 
-# In[54]:
+# In[11]
 
 print 'entropy=',entropy
 best = np.argmin(cost)
 print 'best_centers=',list(centroids[best])
+
+
+# In[ ]:
+
+
+
