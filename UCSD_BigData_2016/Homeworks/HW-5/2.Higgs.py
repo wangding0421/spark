@@ -41,4 +41,3 @@ for name in dataSets.keys():  # Calculate errors on train and test sets
     Err = LabelsAndPredictions.filter(lambda (v,p):v != p).count()/float(data.count())
     errors[depth][name]=Err
 print depth,errors[depth]
-print errors
