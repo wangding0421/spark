@@ -6,3 +6,6 @@
 
 #Ipython notebook checkpoints
 .ipynb_checkpoints
+
+#Compressed Files
+*.zip
